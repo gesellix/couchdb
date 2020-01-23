@@ -39,20 +39,14 @@
 -define(DB_LOCAL_DOC_BODIES, 25).
 -define(DB_ATT_NAMES, 26).
 -define(DB_SEARCH, 27).
--define(DB_MANGO, 28).
 
 
 % Versions
 
 % 0 - Initial implementation
 % 1 - Added attachment hash
-% 2 - Added size information
 
--define(CURR_REV_FORMAT, 2).
-
-% 0 - Adding local doc versions
-
--define(CURR_LDOC_FORMAT, 0).
+-define(CURR_REV_FORMAT, 1).
 
 % Misc constants
 
@@ -63,11 +57,6 @@
 -define(PDICT_TX_ID_KEY, '$fabric_tx_id').
 -define(PDICT_TX_RES_KEY, '$fabric_tx_result').
 -define(PDICT_ON_COMMIT_FUN, '$fabric_on_commit_fun').
--define(PDICT_FOLD_ACC_STATE, '$fabric_fold_acc_state').
-
-% Let's keep these in ascending order
--define(TRANSACTION_TOO_OLD, 1007).
--define(FUTURE_VERSION, 1009).
 -define(COMMIT_UNKNOWN_RESULT, 1021).
 
 
