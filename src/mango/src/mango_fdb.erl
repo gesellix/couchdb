@@ -42,7 +42,7 @@ create_build_vs(TxDb, #idx{} = Idx) ->
     Key = build_vs_key(TxDb, Idx#idx.ddoc),
     VS = fabric2_fdb:new_versionstamp(Tx),
     Value = erlfdb_tuple:pack_vs({VS, ?MANGO_INDEX_BUILDING}),
-    erlfdb:set_versionstamped_value(Tx, Key, Value).
+    ok = erlfdb:set_versionstamped_value(Tx, Key, Value).
 
 
 set_build_vs(TxDb, #idx{} = Idx, VS, State) ->
@@ -176,7 +176,8 @@ args_to_fdb_opts(Args, Idx) ->
     [
         {skip, Skip},
         {dir, Direction},
-        {streaming_mode, want_all}
+        {streaming_mode, want_all},
+        {restart_tx, true}
     ] ++ StartKeyOpts ++ EndKeyOpts.
 
 

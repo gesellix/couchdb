@@ -27,10 +27,11 @@ init([]) ->
         period => 10
     },
 
+    Args = [{worker, mango_jobs_indexer}],
     Children = [
         #{
             id => mango_indexer_server,
-            start => {mango_indexer_server, start_link, []}
+            start => {couch_views_server, start_link, [Args]}
         }
     ] ++ couch_epi:register_service(mango_epi, []),
     {ok, {Flags, Children}}.
