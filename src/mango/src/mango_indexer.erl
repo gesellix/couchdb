@@ -66,8 +66,7 @@ doc_id(#doc{id = DocId}, _) ->
     DocId.
 
 
-% Design doc
-% Todo: Check if design doc is mango index and kick off background worker
+% Check if design doc is mango index and kick off background worker
 % to build new index
 modify_int(Db, _Change, #doc{id = <<?DESIGN_DOC_PREFIX, _/binary>>} = Doc,
         _PrevDoc) ->

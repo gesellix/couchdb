@@ -19,9 +19,7 @@
 ]).
 
 -export([
-%%    view_cb/2,
     handle_message/2,
-    handle_all_docs_message/2,
     composite_indexes/2,
     choose_best_index/2
 ]).
@@ -140,7 +138,7 @@ index_args(#cursor{} = Cursor) ->
     mango_json_bookmark:update_args(Bookmark, Args1).
 
 
-execute(#cursor{db = Db, index = Idx, execution_stats = Stats} = Cursor0, UserFun, UserAcc) ->
+execute(#cursor{db = Db, execution_stats = Stats} = Cursor0, UserFun, UserAcc) ->
     Cursor = Cursor0#cursor{
         user_fun = UserFun,
         user_acc = UserAcc,
@@ -152,26 +150,21 @@ execute(#cursor{db = Db, index = Idx, execution_stats = Stats} = Cursor0, UserFu
             {ok, UserAcc};
         _ ->
             Args = index_args(Cursor),
-            #cursor{opts = Opts} = Cursor,
-            Result = case mango_idx:def(Idx) of
-                all_docs ->
-                    CB = fun ?MODULE:handle_all_docs_message/2,
-                    % all_docs
-                    mango_fdb:query_all_docs(Db, CB, Cursor, Args);
-                _ ->
-                    CB = fun ?MODULE:handle_message/2,
-                    % json index
-                    mango_fdb:query(Db, CB, Cursor, Args)
-            end,
+            CB = fun ?MODULE:handle_message/2,
+            Result = mango_fdb:query(Db, CB, Cursor, Args),
             case Result of
                 {ok, LastCursor} ->
                     NewBookmark = mango_json_bookmark:create(LastCursor),
                     Arg = {add_key, bookmark, NewBookmark},
-                    {_Go, FinalUserAcc} = UserFun(Arg, LastCursor#cursor.user_acc),
-                    Stats0 = LastCursor#cursor.execution_stats,
-                    FinalUserAcc0 = mango_execution_stats:maybe_add_stats(Opts, UserFun, Stats0, FinalUserAcc),
-                    FinalUserAcc1 = mango_cursor:maybe_add_warning(UserFun, Cursor, FinalUserAcc0),
-                    {ok, FinalUserAcc1};
+                    #cursor{
+                        opts = Opts,
+                        execution_stats = Stats0,
+                        user_acc = FinalUserAcc0
+                    } = LastCursor,
+                    {_Go, FinalUserAcc1} = UserFun(Arg, FinalUserAcc0),
+                    FinalUserAcc2 = mango_execution_stats:maybe_add_stats(Opts, UserFun, Stats0, FinalUserAcc1),
+                    FinalUserAcc3 = mango_cursor:maybe_add_warning(UserFun, Cursor, FinalUserAcc2),
+                    {ok, FinalUserAcc3};
                 {error, Reason} ->
                     {error, Reason}
             end
@@ -334,20 +327,6 @@ handle_message({error, Reason}, _Cursor) ->
     {error, Reason}.
 
 
-handle_all_docs_message({row, Props}, Cursor) ->
-    io:format("ALL DOCS ~p ~n", [Props]),
-    case is_design_doc(Props) of
-        true -> {ok, Cursor};
-        false ->
-            Doc = couch_util:get_value(doc, Props),
-            Key = couch_util:get_value(key, Props),
-
-            handle_message({doc, Key, Doc}, Cursor)
-    end;
-handle_all_docs_message(Message, Cursor) ->
-    handle_message(Message, Cursor).
-
-
 handle_doc(#cursor{skip = S} = C, _) when S > 0 ->
     {ok, C#cursor{skip = S - 1}};
 handle_doc(#cursor{limit = L, execution_stats = Stats} = C, Doc) when L > 0 ->
@@ -361,16 +340,6 @@ handle_doc(#cursor{limit = L, execution_stats = Stats} = C, Doc) when L > 0 ->
     }};
 handle_doc(C, _Doc) ->
     {stop, C}.
-
-
-%%ddocid(Idx) ->
-%%    case mango_idx:ddoc(Idx) of
-%%        <<"_design/", Rest/binary>> ->
-%%            Rest;
-%%        Else ->
-%%            Else
-%%    end.
-
 
 %%apply_opts([], Args) ->
 %%    Args;
@@ -485,11 +454,6 @@ match_doc(Selector, Doc, ExecutionStats) ->
     end.
 
 
-is_design_doc(RowProps) ->
-    case couch_util:get_value(id, RowProps) of
-        <<"_design/", _/binary>> -> true;
-        _ -> false
-    end.
 
 
 update_bookmark_keys(#cursor{limit = Limit} = Cursor, {Key, Props}) when Limit > 0 ->

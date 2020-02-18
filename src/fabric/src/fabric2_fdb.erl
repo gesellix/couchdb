@@ -811,7 +811,6 @@ write_doc(#{} = Db0, Doc, NewWinner0, OldWinner, ToUpdate, ToRemove) ->
     % Update database size
     AddSize = sum_add_rev_sizes([NewWinner | ToUpdate]),
     RemSize = sum_rem_rev_sizes(ToRemove),
-%%    TODO: causing mango indexes to fail with fdb error 1036
 %%    incr_stat(Db, <<"sizes">>, <<"external">>, AddSize - RemSize),
 
     ok.

@@ -15,6 +15,7 @@
 -export([start/2, stop/1]).
 
 start(_Type, StartArgs) ->
+    mango_jobs:set_timeout(),
     mango_sup:start_link(StartArgs).
 
 stop(_State) ->

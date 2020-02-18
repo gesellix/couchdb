@@ -92,7 +92,6 @@ spawn_workers(St) ->
         max_workers := MaxWorkers,
         worker_module := WorkerModule
     } = St,
-    io:format("BOOM COUCH VIEWS SERVER ~p ~n", [WorkerModule]),
     case maps:size(Workers) < MaxWorkers of
         true ->
             Pid = WorkerModule:spawn_link(),

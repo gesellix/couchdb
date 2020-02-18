@@ -18,7 +18,6 @@
 -include("mango.hrl").
 -include("mango_idx.hrl").
 -include("mango_cursor.hrl").
--include("mango_idx_view.hrl").
 
 
 -export([
@@ -30,8 +29,9 @@
     set_update_seq/3,
     remove_doc/3,
     write_doc/3,
-    query_all_docs/4,
-    query/4
+    query/4,
+    base_fold_opts/1,
+    mango_idx_prefix/2
 ]).
 
 
@@ -118,90 +118,26 @@ write_doc(TxDb, DocId, IdxResults) ->
         add_key(TxDb, MangoIdxPrefix, Results, DocId)
     end, IdxResults).
 
-
-query_all_docs(Db, CallBack, Cursor, Args) ->
-    #cursor{
-        index = Idx
-    } = Cursor,
-    Opts = args_to_fdb_opts(Args, Idx) ++ [{include_docs, true}],
-    io:format("ALL DOC OPTS ~p ~n", [Opts]),
-    fabric2_db:fold_docs(Db, CallBack, Cursor, Opts).
-
-
 query(Db, CallBack, Cursor, Args) ->
     #cursor{
         index = Idx
     } = Cursor,
-    MangoIdxPrefix = mango_idx_prefix(Db, Idx#idx.ddoc),
-    fabric2_fdb:transactional(Db, fun (TxDb) ->
-        Acc0 = #{
-            cursor => Cursor,
-            prefix => MangoIdxPrefix,
-            db => TxDb,
-            callback => CallBack
-        },
-
-        Opts = args_to_fdb_opts(Args, Idx),
-        io:format("OPTS ~p ~n", [Opts]),
-        try
-            Acc1 = fabric2_fdb:fold_range(TxDb, MangoIdxPrefix, fun fold_cb/2, Acc0, Opts),
-            #{
-                cursor := Cursor1
-            } = Acc1,
-            {ok, Cursor1}
-        catch
-            throw:{stop, StopCursor}  ->
-                {ok, StopCursor}
-        end
-    end).
+    Mod = mango_idx:fdb_mod(Idx),
+    Mod:query(Db, CallBack, Cursor, Args).
 
 
-args_to_fdb_opts(Args, Idx) ->
+base_fold_opts(Args) ->
     #{
-        start_key := StartKey,
-        start_key_docid := StartKeyDocId,
-        end_key := EndKey,
-        end_key_docid := EndKeyDocId,
         dir := Direction,
         skip := Skip
     } = Args,
-
-    io:format("ARGS ~p ~n", [Args]),
-    io:format("START ~p ~n End ~p ~n", [StartKey, EndKey]),
-    Mod = mango_idx:fdb_mod(Idx),
-
-    StartKeyOpts = Mod:start_key_opts(StartKey, StartKeyDocId),
-    EndKeyOpts = Mod:end_key_opts(EndKey, EndKeyDocId),
 
     [
         {skip, Skip},
         {dir, Direction},
         {streaming_mode, want_all},
         {restart_tx, true}
-    ] ++ StartKeyOpts ++ EndKeyOpts.
-
-
-fold_cb({Key, Val}, Acc) ->
-    #{
-        prefix := MangoIdxPrefix,
-        db := Db,
-        callback := Callback,
-        cursor := Cursor
-
-    } = Acc,
-    {{_, DocId}} = erlfdb_tuple:unpack(Key, MangoIdxPrefix),
-    SortKeys = couch_views_encoding:decode(Val),
-    {ok, Doc} = fabric2_db:open_doc(Db, DocId, [{conflicts, true}]),
-    JSONDoc = couch_doc:to_json_obj(Doc, []),
-    io:format("PRINT ~p ~p ~n", [DocId, JSONDoc]),
-    case Callback({doc, SortKeys, JSONDoc}, Cursor) of
-        {ok, Cursor1} ->
-            Acc#{
-                cursor := Cursor1
-            };
-        {stop, Cursor1} ->
-            throw({stop, Cursor1})
-    end.
+    ].
 
 
 mango_idx_prefix(TxDb, Id) ->
