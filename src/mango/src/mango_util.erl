@@ -86,15 +86,6 @@ open_doc(Db, DocId) ->
 
 open_doc(Db, DocId, Options) ->
     fabric2_db:open_doc(Db, DocId, Options).
-    % TODO: is this defer still required?
-%%    case mango_util:defer(fabric, open_doc, [Db, DocId, Options]) of
-%%        {ok, Doc} ->
-%%            {ok, Doc};
-%%        {not_found, _} ->
-%%            not_found;
-%%        _ ->
-%%            ?MANGO_ERROR({error_loading_doc, DocId})
-%%    end.
 
 
 open_ddocs(Db) ->

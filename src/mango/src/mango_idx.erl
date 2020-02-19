@@ -26,7 +26,7 @@
     add/2,
     remove/2,
     from_ddoc/2,
-    add_build_status/2,
+%%    add_build_status/2,
     special/1,
 
     dbname/1,
@@ -81,7 +81,8 @@ ddoc_fold_cb({row, Row}, Acc) ->
     case proplists:get_value(<<"language">>, Props) of
         <<"query">> ->
             Idx = from_ddoc(Db, JSONDoc),
-            {ok, Acc#{rows:= Rows ++ Idx}};
+            Idx1 = add_build_status(Db, Idx),
+            {ok, Acc#{rows:= Rows ++ Idx1}};
         _ ->
             {ok, Acc}
     end.
@@ -104,7 +105,7 @@ get_rev_info(Row) ->
 
 
 get_usable_indexes(Db, Selector, Opts) ->
-    ExistingIndexes = mango_idx:add_build_status(Db, mango_idx:list(Db)),
+    ExistingIndexes = mango_idx:list(Db),
     GlobalIndexes = mango_cursor:remove_indexes_with_partial_filter_selector(
             ExistingIndexes
         ),
@@ -230,13 +231,12 @@ from_ddoc(Db, {Props}) ->
         _ ->
             ?MANGO_ERROR(invalid_query_ddoc_language)
     end,
-    IdxMods = [mango_idx_view],
-%%    IdxMods = case clouseau_rpc:connected() of
-%%        true ->
-%%            [mango_idx_view, mango_idx_text];
-%%        false ->
-%%            [mango_idx_view]
-%%    end,
+    IdxMods = case is_text_service_available() of
+        true ->
+            [mango_idx_view, mango_idx_text];
+        false ->
+            [mango_idx_view]
+    end,
     Idxs = lists:flatmap(fun(Mod) -> Mod:from_ddoc({Props}) end, IdxMods),
     lists:map(fun(Idx) ->
         Idx#idx{
@@ -247,18 +247,16 @@ from_ddoc(Db, {Props}) ->
     end, Idxs).
 
 
-add_build_status(Db, Idxs) ->
-    fabric2_fdb:transactional(Db, fun(TxDb) ->
-        lists:map(fun
-            (#idx{type = <<"special">>} = Idx) ->
-                Idx;
-            (Idx) ->
-                DDoc = mango_idx:ddoc(Idx),
-                Idx#idx{
-                    build_status = mango_fdb:get_build_status(TxDb, DDoc)
-                }
-        end, Idxs)
-    end).
+add_build_status(TxDb, Idxs) ->
+    lists:map(fun
+        (#idx{type = <<"special">>} = Idx) ->
+            Idx;
+        (Idx) ->
+            DDoc = mango_idx:ddoc(Idx),
+            Idx#idx{
+                build_status = mango_fdb:get_build_state(TxDb, DDoc)
+            }
+    end, Idxs).
 
 
 special(Db) ->

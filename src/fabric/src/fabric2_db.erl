@@ -811,16 +811,9 @@ fold_docs(Db, UserFun, UserAcc0, Options) ->
 
                 Row1 = case lists:keyfind(include_docs, 1, Options) of
                     {include_docs, true} ->
-                        DocMember = case fabric2_db:open_doc(Db, DocId, OpenOpts) of
-                            {not_found, missing} ->
-                                [];
-                            {ok, #doc{deleted = true}} ->
-                                [{doc, null}];
-                            {ok, #doc{} = Doc} ->
-                                [{doc, couch_doc:to_json_obj(Doc, DocOpts)}]
-                        end,
-                        Row0 ++ DocMember;
-                    _ -> Row0
+                        Row0 ++ open_json_doc(Db, DocId, OpenOpts, DocOpts);
+                    _ ->
+                        Row0
                 end,
 
                 maybe_stop(UserFun({row, Row1}, Acc))
@@ -1864,4 +1857,15 @@ stem_revisions(#{} = Db, #doc{} = Doc) ->
     case RevPos >= RevsLimit of
         true -> Doc#doc{revs = {RevPos, lists:sublist(Revs, RevsLimit)}};
         false -> Doc
+    end.
+
+
+open_json_doc(Db, DocId, OpenOpts, DocOpts) ->
+    case fabric2_db:open_doc(Db, DocId, OpenOpts) of
+        {not_found, missing} ->
+            [];
+        {ok, #doc{deleted = true}} ->
+            [{doc, null}];
+        {ok, #doc{} = Doc} ->
+            [{doc, couch_doc:to_json_obj(Doc, DocOpts)}]
     end.

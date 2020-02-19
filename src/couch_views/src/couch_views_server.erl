@@ -41,7 +41,7 @@ start_link(Opts) ->
 init(Opts) ->
     WorkerModule = couch_util:get_value(worker, Opts, couch_views_indexer),
     process_flag(trap_exit, true),
-    couch_views_jobs:set_timeout(),
+    WorkerModule:set_timeout(),
     St = #{
         workers => #{},
         max_workers => max_workers(),

@@ -649,11 +649,12 @@ write_doc(#{} = Db0, Doc, NewWinner0, OldWinner, ToUpdate, ToRemove) ->
         atts = Atts
     } = Doc,
 
-    % Doc body
-    % Fetch the old doc body for the mango hooks later
-    PrevDoc = if OldWinner == not_found -> not_found; true ->
+    % Fetch the old doc body for the mango hooks
+    OldWinnerDoc = if OldWinner == not_found -> not_found; true ->
         get_doc_body(Db, DocId, OldWinner)
     end,
+
+    % Doc body
     ok = write_doc_body(Db, Doc),
 
     % Attachment bookkeeping
@@ -785,13 +786,14 @@ write_doc(#{} = Db0, Doc, NewWinner0, OldWinner, ToUpdate, ToRemove) ->
             end,
             incr_stat(Db, <<"doc_count">>, -1),
             incr_stat(Db, <<"doc_del_count">>, 1),
-            mango_indexer:delete_doc(Db, PrevDoc);
+            mango_indexer:delete_doc(Db, OldWinnerDoc);
         updated ->
+            % Get winning doc with conflicts field
             DocRev = extract_rev(Doc#doc.revs),
             {WinnerRevPos, _} = WinnerRevId = maps:get(rev_id, NewWinner),
             {WinnerDoc, OldWinnerDoc} = case WinnerRevId == DocRev of
-                true -> {Doc, PrevDoc};
-                false -> {PrevDoc, PrevDoc}
+                true -> {Doc, OldWinnerDoc};
+                false -> {OldWinnerDoc, OldWinnerDoc}
             end,
 
             RevConflicts = lists:foldl(fun (UpdateRev, Acc) ->

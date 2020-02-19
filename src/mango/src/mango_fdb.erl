@@ -24,7 +24,7 @@
     create_build_vs/2,
     set_build_vs/4,
     get_build_vs/2,
-    get_build_status/2,
+    get_build_state/2,
     get_update_seq/2,
     set_update_seq/3,
     remove_doc/3,
@@ -70,7 +70,7 @@ get_build_vs(TxDb, DDoc) ->
     end.
 
 
-get_build_status(TxDb, DDoc) ->
+get_build_state(TxDb, DDoc) ->
     case get_build_vs(TxDb, DDoc) of
         not_found -> ?MANGO_INDEX_BUILDING;
         {_, BuildState} -> BuildState
@@ -117,6 +117,7 @@ write_doc(TxDb, DocId, IdxResults) ->
         MangoIdxPrefix = mango_idx_prefix(TxDb, DDocId),
         add_key(TxDb, MangoIdxPrefix, Results, DocId)
     end, IdxResults).
+
 
 query(Db, CallBack, Cursor, Args) ->
     #cursor{

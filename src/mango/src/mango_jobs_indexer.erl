@@ -21,8 +21,10 @@
 
 
 -export([
+    set_timeout/0,
     init/0
 ]).
+
 
 -include("mango.hrl").
 -include("mango_idx.hrl").
@@ -32,6 +34,10 @@
 
 spawn_link() ->
     proc_lib:spawn_link(?MODULE, init, []).
+
+
+set_timeout() ->
+    mango_jobs:set_timeout().
 
 
 init() ->
@@ -264,47 +270,6 @@ index_doc(_Db, _Idx, #{deleted := true}) ->
 
 index_doc(Db, Idx, #{doc := Doc}) ->
     mango_indexer:write_doc(Db, Doc, [Idx]).
-
-
-%%fetch_docs(Db, Changes) ->
-%%    {Deleted, NotDeleted} = lists:partition(fun(Doc) ->
-%%        #{deleted := Deleted} = Doc,
-%%        Deleted
-%%    end, Changes),
-%%
-%%    RevState = lists:foldl(fun(Change, Acc) ->
-%%        #{id := Id} = Change,
-%%        RevFuture = fabric2_fdb:get_winning_revs_future(Db, Id, 1),
-%%        Acc#{
-%%            RevFuture => {Id, Change}
-%%        }
-%%    end, #{}, NotDeleted),
-%%
-%%    RevFutures = maps:keys(RevState),
-%%    BodyState = lists:foldl(fun(RevFuture, Acc) ->
-%%        {Id, Change} = maps:get(RevFuture, RevState),
-%%        Revs = fabric2_fdb:get_winning_revs_wait(Db, RevFuture),
-%%
-%%        % I'm assuming that in this changes transaction that the winning
-%%        % doc body exists since it is listed in the changes feed as not deleted
-%%        #{winner := true} = RevInfo = lists:last(Revs),
-%%        BodyFuture = fabric2_fdb:get_doc_body_future(Db, Id, RevInfo),
-%%        Acc#{
-%%            BodyFuture => {Id, RevInfo, Change}
-%%        }
-%%    end, #{}, erlfdb:wait_for_all(RevFutures)),
-%%
-%%    BodyFutures = maps:keys(BodyState),
-%%    ChangesWithDocs = lists:map(fun (BodyFuture) ->
-%%        {Id, RevInfo, Change} = maps:get(BodyFuture, BodyState),
-%%        Doc = fabric2_fdb:get_doc_body_wait(Db, Id, RevInfo, BodyFuture),
-%%        Change#{doc => Doc}
-%%    end, erlfdb:wait_for_all(BodyFutures)),
-%%
-%%    % This combines the deleted changes with the changes that contain docs
-%%    % Important to note that this is now unsorted. Which is fine for now
-%%    % But later could be an issue if we split this across transactions
-%%    Deleted ++ ChangesWithDocs.
 
 
 report_progress(State, UpdateType) ->

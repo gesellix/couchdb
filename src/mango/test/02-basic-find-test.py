@@ -205,7 +205,7 @@ class BasicFindTests(mango.UserDocsTests):
         docs1 = self.db.find({"age": {"$gt": 0}}, sort=[{"age": "desc"}])
         docs2 = list(reversed(sorted(docs1, key=lambda d: d["age"])))
         assert docs1 is not docs2 and docs1 == docs2
-    #
+
     def test_sort_desc_complex(self):
         docs = self.db.find(
             {
