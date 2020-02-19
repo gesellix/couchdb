@@ -813,7 +813,7 @@ write_doc(#{} = Db0, Doc, NewWinner0, OldWinner, ToUpdate, ToRemove) ->
     % Update database size
     AddSize = sum_add_rev_sizes([NewWinner | ToUpdate]),
     RemSize = sum_rem_rev_sizes(ToRemove),
-%%    incr_stat(Db, <<"sizes">>, <<"external">>, AddSize - RemSize),
+    incr_stat(Db, <<"sizes">>, <<"external">>, AddSize - RemSize),
 
     ok.
 

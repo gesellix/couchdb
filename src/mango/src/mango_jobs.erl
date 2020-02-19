@@ -31,7 +31,7 @@ build_index(TxDb, #idx{} = Idx) ->
 
     JobId = job_id(TxDb, Idx),
     JobData = job_data(TxDb, Idx),
-    ok = couch_jobs:add(undefined, ?MANGO_INDEX_JOB_TYPE, JobId, JobData),
+    ok = couch_jobs:add(TxDb, ?MANGO_INDEX_JOB_TYPE, JobId, JobData),
     {ok, JobId}.
 
 
