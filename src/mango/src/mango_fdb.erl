@@ -64,9 +64,8 @@ get_build_vs(TxDb, DDoc) ->
     } = TxDb,
     Key = build_vs_key(TxDb, DDoc),
     EV = erlfdb:wait(erlfdb:get(Tx, Key)),
-    case EV of
-        not_found -> not_found;
-        EV -> erlfdb_tuple:unpack(EV)
+    if EV == not_found -> not_found; true ->
+        erlfdb_tuple:unpack(EV)
     end.
 
 
